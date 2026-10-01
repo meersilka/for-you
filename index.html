@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a0a14">
+<title>Для тебя</title>
+<meta name="description" content="Маленькое письмо для тебя">
+<meta property="og:title" content="Тебе письмо 💌">
+<meta property="og:description" content="Открой, когда будет минутка">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💌</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-1: #2a0a14;
+    --bg-2: #4a0f24;
+    --rose: #ff4d79;
+    --rose-soft: #ff8fab;
+    --cream: #fff4ec;
+    --paper: #fffaf5;
+    --ink: #4a1626;
+    --gold: #f3c47a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    color: var(--cream);
+    background: radial-gradient(120% 90% at 50% 0%, var(--bg-2) 0%, var(--bg-1) 60%, #14040a 100%) fixed;
+    background-color: var(--bg-1);
+    min-height: 100svh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none; user-select: none;
+    touch-action: manipulation;
+  }
+  canvas#hearts { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+  .stage {
+    position: relative; z-index: 1;
+    min-height: 100svh;
+    display: grid; place-items: center;
+    padding: max(24px, env(safe-area-inset-top)) 16px max(80px, env(safe-area-inset-bottom));
+  }
+  .scene { display: none; width: 100%; max-width: 520px; text-align: center; }
+  .scene.active { display: block; animation: rise .9s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(24px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  .kicker {
+    font-family: "Caveat", cursive; font-size: 24px; color: var(--rose-soft);
+    letter-spacing: .5px; margin-bottom: 12px;
+  }
+  h1 {
+    font-weight: 700; font-size: clamp(32px, 8vw, 54px); line-height: 1.05;
+    letter-spacing: -.5px; margin-bottom: 10px;
+  }
+  h1 em { font-style: italic; color: var(--rose-soft); font-weight: 500; }
+  h2 { font-weight: 700; font-size: clamp(28px, 7vw, 40px); line-height: 1.1; margin-bottom: 6px; }
+  .hint { opacity: .7; font-size: 19px; font-style: italic; }
+
+  .dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.2); transition: .3s; }
+  .dots i.on { background: var(--rose); width: 22px; border-radius: 4px; }
+
+  /* ---------- Конверт ---------- */
+  .envelope {
+    position: relative; width: min(300px, 78vw); aspect-ratio: 3 / 2;
+    margin: 36px auto 26px; cursor: pointer;
+    filter: drop-shadow(0 30px 40px rgba(0,0,0,.45));
+    animation: bob 3.2s ease-in-out infinite;
+  }
+  @keyframes bob { 50% { transform: translateY(-8px) rotate(-1deg); } }
+  .envelope .body {
+    position: absolute; inset: 0; border-radius: 8px;
+    background: linear-gradient(160deg, #ffe3e8, #f7b9c6);
+    overflow: hidden;
+  }
+  .envelope .body::before, .envelope .body::after {
+    content: ""; position: absolute; bottom: 0; width: 60%; height: 100%;
+    background: linear-gradient(180deg, #f9c6d1, #f2a4b6);
+  }
+  .envelope .body::before { left: 0; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+  .envelope .body::after { right: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+  .envelope .flap {
+    position: absolute; left: 0; right: 0; top: 0; height: 62%;
+    background: linear-gradient(180deg, #f6a9bb, #ec8aa2);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    transform-origin: top; transition: transform .7s cubic-bezier(.6,0,.3,1);
+    z-index: 3; border-radius: 8px 8px 0 0;
+  }
+  .envelope .seal {
+    position: absolute; left: 50%; top: 52%; z-index: 4;
+    width: 54px; height: 54px; transform: translate(-50%, -50%);
+    display: grid; place-items: center;
+    background: radial-gradient(circle at 35% 30%, #ff7a9a, #c3123f 70%);
+    border-radius: 50%; box-shadow: 0 4px 10px rgba(120,0,30,.5), inset 0 -3px 6px rgba(0,0,0,.25);
+    font-size: 24px; color: #fff; transition: opacity .3s, transform .3s;
+  }
+  .envelope.open { animation: none; }
+  .envelope.open .flap { transform: rotateX(180deg); z-index: 0; }
+  .envelope.open .seal { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+
+  .btn {
+    font: 700 20px/1 "Cormorant Garamond", serif;
+    border: 0; border-radius: 999px; cursor: pointer;
+    padding: 16px 34px; min-height: 52px;
+    transition: transform .25s cubic-bezier(.3,1.6,.5,1), box-shadow .25s, background .25s;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  .btn-yes {
+    color: #fff; background: linear-gradient(135deg, #ff5d86, #e0144f);
+    box-shadow: 0 10px 30px rgba(255,77,121,.45);
+  }
+  .btn-no {
+    color: var(--cream); background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.2);
+  }
+  .btn-ghost {
+    color: var(--cream); background: transparent; border: 1px solid rgba(255,255,255,.25);
+    font-size: 18px; padding: 12px 26px;
+  }
+
+  .next-wrap { margin-top: 22px; opacity: 0; transform: translateY(10px); transition: .6s; pointer-events: none; }
+  .next-wrap.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  /* ---------- Письмо ---------- */
+  .letter {
+    position: relative; text-align: left;
+    background: var(--paper); color: var(--ink);
+    border-radius: 6px; padding: 30px 22px 26px 34px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.45);
+    background-image: repeating-linear-gradient(transparent 0 33px, rgba(200,80,110,.12) 33px 34px);
+    background-position: 0 22px;
+  }
+  .letter::before {
+    content: ""; position: absolute; left: 22px; top: 0; bottom: 0; width: 1px;
+    background: rgba(224,20,79,.25);
+  }
+  .letter .to { font-family: "Caveat", cursive; font-size: 30px; color: #c3123f; margin-bottom: 6px; }
+  .letter .text {
+    font-family: "Caveat", cursive; font-size: 23px; line-height: 34px;
+    min-height: 210px; white-space: pre-wrap;
+  }
+  .letter .caret { display: inline-block; width: 2px; height: 22px; background: var(--ink); vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .letter .sign { font-family: "Caveat", cursive; font-size: 26px; text-align: right; margin-top: 8px; opacity: 0; transition: opacity .8s; }
+  .letter .sign.show { opacity: 1; }
+  .letter-hint { margin-top: 12px; font-size: 16px; opacity: .55; font-style: italic; }
+
+  /* ---------- Игра 1: поймай сердечки ---------- */
+  .score { font-family: "Caveat", cursive; font-size: 28px; margin: 6px 0 10px; }
+  .score b { color: var(--rose-soft); }
+  .arena {
+    position: relative; height: min(380px, 52svh); border-radius: 22px; overflow: hidden;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12);
+    touch-action: none;
+  }
+  .arena .start-msg {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 20px; font-style: italic; opacity: .75; pointer-events: none; padding: 20px;
+  }
+  .falling {
+    position: absolute; top: 0; width: 58px; height: 58px; margin-left: -29px;
+    display: grid; place-items: center; font-size: 40px; line-height: 1;
+    border: 0; background: none; cursor: pointer; padding: 0;
+    animation: fall linear forwards; touch-action: none;
+  }
+  @keyframes fall { from { transform: translateY(-70px); } to { transform: translateY(var(--h)); } }
+  .pop {
+    position: absolute; pointer-events: none; font-family: "Caveat", cursive; font-size: 28px; font-weight: 700;
+    transform: translate(-50%, -50%); animation: popup .7s ease-out forwards;
+  }
+  @keyframes popup { to { opacity: 0; transform: translate(-50%, -150%) scale(1.3); } }
+
+  /* ---------- Игра 2: пары ---------- */
+  .grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    max-width: 400px; margin: 10px auto 0;
+  }
+  .card {
+    aspect-ratio: 3 / 4; perspective: 600px; cursor: pointer; border: 0; background: none; padding: 0;
+  }
+  .card .inner {
+    position: relative; width: 100%; height: 100%;
+    transform-style: preserve-3d; transition: transform .45s cubic-bezier(.3,1.3,.5,1);
+  }
+  .card.flip .inner, .card.done .inner { transform: rotateY(180deg); }
+  .card .face, .card .back {
+    position: absolute; inset: 0; border-radius: 12px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    display: grid; place-items: center;
+  }
+  .card .back {
+    background: linear-gradient(135deg, #ff5d86, #a80c38);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.18);
+    font-size: 22px; color: rgba(255,255,255,.55);
+  }
+  .card .face {
+    background: var(--paper); transform: rotateY(180deg);
+    font-size: clamp(30px, 9vw, 42px);
+  }
+  .card.done .face { box-shadow: 0 0 0 3px var(--gold), 0 0 20px rgba(243,196,122,.5); }
+
+  /* ---------- Игра 3: скретч ---------- */
+  .scratch {
+    position: relative; width: min(340px, 100%); aspect-ratio: 4 / 3; margin: 14px auto 0;
+    border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.4);
+  }
+  .scratch .under {
+    position: absolute; inset: 0; display: grid; place-items: center; padding: 20px;
+    background: var(--paper); color: var(--ink);
+    font-family: "Caveat", cursive; font-size: clamp(26px, 7vw, 34px); line-height: 1.2;
+  }
+  .scratch canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; transition: opacity .6s; }
+
+  /* ---------- Вопрос ---------- */
+  .question-heart {
+    font-size: 72px; display: inline-block; margin-bottom: 8px;
+    animation: beat 1.2s ease-in-out infinite;
+  }
+  @keyframes beat { 0%,100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+  .buttons {
+    position: relative; height: 140px; margin-top: 24px;
+    display: flex; gap: 16px; justify-content: center; align-items: center;
+  }
+  .btn-no.fleeing { position: fixed; z-index: 5; margin: 0; transition: left .35s cubic-bezier(.3,1.4,.5,1), top .35s cubic-bezier(.3,1.4,.5,1), transform .25s; }
+  .no-phrase { min-height: 30px; margin-top: 4px; font-family: "Caveat", cursive; font-size: 24px; color: var(--rose-soft); }
+
+  /* ---------- Финал ---------- */
+  .final h1 { font-size: clamp(40px, 10vw, 66px); }
+  .final p { font-size: 22px; line-height: 1.45; opacity: .9; margin: 14px auto 0; max-width: 420px; }
+  .final .big-heart { font-size: 96px; display: inline-block; animation: beat 1.2s ease-in-out infinite; }
+  .reasons { list-style: none; margin: 26px auto 0; max-width: 400px; display: grid; gap: 10px; }
+  .reasons li {
+    font-size: 19px; padding: 12px 16px; border-radius: 14px; text-align: left;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+    opacity: 0; transform: translateY(10px); animation: rise .6s forwards;
+  }
+
+  .music {
+    position: fixed; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 10;
+    width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+    background: rgba(0,0,0,.3); color: var(--cream); font-size: 20px; cursor: pointer;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+
+  @media (hover: hover) {
+    .envelope:hover .seal { transform: translate(-50%, -50%) scale(1.08); }
+    .btn-yes:hover { box-shadow: 0 14px 40px rgba(255,77,121,.65); }
+  }
+  @media (max-width: 380px) {
+    .grid { gap: 7px; }
+    .btn { padding: 14px 26px; font-size: 19px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .envelope, .question-heart, .big-heart { animation: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="hearts"></canvas>
+
+<main class="stage">
+  <!-- 1. Конверт -->
+  <section class="scene active" id="s-envelope">
+    <div class="kicker">тебе письмо</div>
+    <h1>Открой, <em>это для тебя</em></h1>
+    <div class="envelope" id="envelope" role="button" tabindex="0" aria-label="Открыть конверт">
+      <div class="body"></div>
+      <div class="flap"></div>
+      <div class="seal">❤</div>
+    </div>
+    <p class="hint">нажми на конверт</p>
+  </section>
+
+  <!-- 2. Письмо -->
+  <section class="scene" id="s-letter">
+    <div class="letter" id="letter">
+      <div class="to" id="to"></div>
+      <div class="text" id="typed"></div>
+      <div class="sign" id="sign"></div>
+    </div>
+    <p class="letter-hint" id="letter-hint">нажми на письмо, чтобы дочитать сразу</p>
+    <div class="next-wrap" id="letter-next">
+      <p class="hint" style="margin-bottom:14px">но это ещё не всё. сначала - три маленьких испытания</p>
+      <button class="btn btn-yes" data-go="s-catch">Поехали →</button>
+    </div>
+  </section>
+
+  <!-- 3. Игра 1: поймай сердечки -->
+  <section class="scene" id="s-catch">
+    <div class="dots"><i class="on"></i><i></i><i></i></div>
+    <h2>Поймай <em>10 сердечек</em></h2>
+    <p class="hint">тапай по ❤️, а 💔 не трогай</p>
+    <div class="score">поймано: <b id="catch-score">0</b> / 10</div>
+    <div class="arena" id="arena"><div class="start-msg" id="arena-msg">нажми сюда, чтобы начать</div></div>
+    <div class="next-wrap" id="catch-next">
+      <button class="btn btn-yes" data-go="s-memory">Дальше →</button>
+    </div>
+  </section>
+
+  <!-- 4. Игра 2: найди пары -->
+  <section class="scene" id="s-memory">
+    <div class="dots"><i class="on"></i><i class="on"></i><i></i></div>
+    <h2>Найди <em>все пары</em></h2>
+    <p class="hint">переворачивай по две карточки</p>
+    <div class="score">ходов: <b id="mem-moves">0</b></div>
+    <div class="grid" id="grid"></div>
+    <div class="next-wrap" id="memory-next">
+      <button class="btn btn-yes" data-go="s-scratch">Последнее →</button>
+    </div>
+  </section>
+
+  <!-- 5. Игра 3: скретч-карта -->
+  <section class="scene" id="s-scratch">
+    <div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <h2>Сотри <em>пальцем</em></h2>
+    <p class="hint">под ней кое-что спрятано</p>
+    <div class="scratch" id="scratch">
+      <div class="under" id="scratch-text"></div>
+      <canvas id="scratch-cv"></canvas>
+    </div>
+    <div class="next-wrap" id="scratch-next">
+      <button class="btn btn-yes" data-go="s-question">Ответить →</button>
+    </div>
+  </section>
+
+  <!-- 6. Вопрос -->
+  <section class="scene" id="s-question">
+    <span class="question-heart">💗</span>
+    <h1>Ты меня <em>любишь?</em></h1>
+    <div class="buttons">
+      <button class="btn btn-yes" id="yes">Да</button>
+      <button class="btn btn-no" id="no">Нет</button>
+    </div>
+    <div class="no-phrase" id="no-phrase" aria-live="polite"></div>
+  </section>
+
+  <!-- 7. Финал -->
+  <section class="scene final" id="s-final">
+    <span class="big-heart">💞</span>
+    <h1>Я знал!</h1>
+    <p id="final-text"></p>
+    <ul class="reasons" id="reasons"></ul>
+    <div style="margin-top:28px"><button class="btn btn-ghost" id="again">Ещё раз с начала</button></div>
+  </section>
+</main>
+
+<button class="music" id="music" aria-label="Музыка">♪</button>
+
+<script>
+/* ====== НАСТРОЙКИ - меняй тут ====== */
+const CONFIG = {
+  to: 'Саша',
+  from: 'Денис',
+  letter:
+`Хотел сказать тебе кое-что не в переписке, а вот так - красиво.
+
+С тобой даже обычный день становится лучше. Ты умеешь рассмешить, когда всё идёт не так, и рядом с тобой спокойно.
+
+Спасибо, что ты есть.`,
+  scratchText: 'Ты самая лучшая 💗<br>А теперь главный вопрос...',
+  memoryEmojis: ['💗', '🌹', '🧸', '🍫', '💍', '🌙'],
+  finalText: 'И я тебя очень люблю. Это лучшее, что я сегодня услышал.',
+  reasons: [
+    '💗 за твою улыбку',
+    '✨ за то, что с тобой легко',
+    '🌙 за наши разговоры допоздна',
+    '🫶 просто за то, что ты - это ты',
+  ],
+  noPhrases: [
+    'точно нет?', 'подумай ещё', 'кнопка сломалась', 'не-а, не поймаешь',
+    'ну пожааалуйста', 'я обижусь 🥺', 'там только «да»', 'последний шанс!',
+  ],
+};
+/* =================================== */
+
+const $ = (id) => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sceneEnter = {};
+
+function show(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'instant' in document.documentElement.style ? 'instant' : 'auto' });
+  if (sceneEnter[id]) sceneEnter[id]();
+}
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+const reveal = (id) => $(id).classList.add('show');
+
+/* ---------- Фон: падающие сердечки + взрывы ---------- */
+const cv = $('hearts'), ctx = cv.getContext('2d');
+let W, H, DPR, hearts = [], bursts = [];
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = cv.width = innerWidth * DPR; H = cv.height = innerHeight * DPR;
+  cv.style.width = innerWidth + 'px'; cv.style.height = innerHeight + 'px';
+}
+addEventListener('resize', resize); resize();
+
+function heartPath(c, x, y, s) {
+  c.beginPath();
+  c.moveTo(x, y + s * .3);
+  c.bezierCurveTo(x, y, x - s * .5, y, x - s * .5, y + s * .3);
+  c.bezierCurveTo(x - s * .5, y + s * .6, x, y + s * .8, x, y + s);
+  c.bezierCurveTo(x, y + s * .8, x + s * .5, y + s * .6, x + s * .5, y + s * .3);
+  c.bezierCurveTo(x + s * .5, y, x, y, x, y + s * .3);
+  c.closePath();
+}
+const COLORS = ['#ff4d79', '#ff8fab', '#ffb3c6', '#e0144f', '#f3c47a'];
+const pick = (a) => a[Math.random() * a.length | 0];
+function spawn(top) {
+  return {
+    x: Math.random() * W, y: top ? -40 * DPR : Math.random() * H,
+    s: (8 + Math.random() * 18) * DPR, v: (.3 + Math.random() * .8) * DPR,
+    sway: Math.random() * Math.PI * 2, a: .12 + Math.random() * .3, c: pick(COLORS),
+  };
+}
+for (let i = 0; i < (innerWidth < 600 ? 18 : 36); i++) hearts.push(spawn(false));
+
+function burst(cx, cy, n = 60) {
+  if (reduceMotion) return;
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2, sp = (3 + Math.random() * 9) * DPR;
+    bursts.push({
+      x: cx * DPR, y: cy * DPR, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 4 * DPR,
+      s: (8 + Math.random() * 14) * DPR, life: 1, c: pick(COLORS),
+    });
+  }
+}
+function tick() {
+  ctx.clearRect(0, 0, W, H);
+  for (const h of hearts) {
+    h.y += h.v; h.sway += .02; h.x += Math.sin(h.sway) * .4 * DPR;
+    if (h.y > H + 40 * DPR) Object.assign(h, spawn(true));
+    ctx.globalAlpha = h.a; ctx.fillStyle = h.c; heartPath(ctx, h.x, h.y, h.s); ctx.fill();
+  }
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i];
+    b.vy += .25 * DPR; b.x += b.vx; b.y += b.vy; b.vx *= .98; b.life -= .012;
+    if (b.life <= 0) { bursts.splice(i, 1); continue; }
+    ctx.globalAlpha = b.life; ctx.fillStyle = b.c; heartPath(ctx, b.x, b.y, b.s); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(tick);
+}
+if (!reduceMotion) tick();
+const burstAt = (el, n) => { const r = el.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, n); };
+
+/* ---------- Звук (генерируется в браузере, без файлов) ---------- */
+let audio = null, musicOn = false, musicTimer = null;
+function ensureAudio() {
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+}
+function note(freq, t, dur, vol = .08, type = 'sine') {
+  if (!audio) return;
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .02);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + .05);
+}
+const sfx = {
+  chime() { if (!audio) return; const t = audio.currentTime; [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(f, t + i * .09, .6, .07)); },
+  pop() { if (audio) note(880 + Math.random() * 300, audio.currentTime, .15, .06, 'triangle'); },
+  bad() { if (audio) note(180, audio.currentTime, .25, .07, 'square'); },
+  flip() { if (audio) note(600, audio.currentTime, .08, .03, 'triangle'); },
+};
+const MELODY = [392, 440, 523.25, 440, 392, 329.63, 349.23, 392, 523.25, 493.88, 440, 392];
+function loopMelody() {
+  const t = audio.currentTime;
+  MELODY.forEach((f, i) => { note(f, t + i * .42, .9, .04); note(f / 2, t + i * .42, .9, .018); });
+  musicTimer = setTimeout(loopMelody, MELODY.length * 420);
+}
+$('music').onclick = () => {
+  ensureAudio();
+  musicOn = !musicOn;
+  $('music').textContent = musicOn ? '❚❚' : '♪';
+  if (musicOn) loopMelody(); else clearTimeout(musicTimer);
+};
+// первый тап где угодно разблокирует звук эффектов (iOS иначе молчит)
+addEventListener('pointerdown', ensureAudio, { once: true });
+
+/* ---------- 1. Конверт ---------- */
+function openEnvelope() {
+  const env = $('envelope');
+  if (env.classList.contains('open')) return;
+  ensureAudio();
+  env.classList.add('open');
+  burstAt(env, 40); sfx.chime();
+  setTimeout(() => { show('s-letter'); typeLetter(); }, 900);
+}
+$('envelope').addEventListener('click', openEnvelope);
+$('envelope').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEnvelope(); } });
+
+/* ---------- 2. Письмо, печатается по буквам ---------- */
+let typing = null;
+function typeLetter() {
+  $('to').textContent = CONFIG.to + ',';
+  $('sign').textContent = '- ' + CONFIG.from;
+  const el = $('typed'), txt = CONFIG.letter;
+  const caret = document.createElement('span'); caret.className = 'caret';
+  let i = 0;
+  const done = () => {
+    clearTimeout(typing); i = txt.length;
+    caret.remove(); el.textContent = txt;
+    $('letter-hint').style.visibility = 'hidden';
+    reveal('sign');
+    setTimeout(() => reveal('letter-next'), 500);
+  };
+  $('letter').onclick = done;
+  if (reduceMotion) return done();
+  el.textContent = ''; el.appendChild(caret);
+  (function step() {
+    if (i >= txt.length) return done();
+    const ch = txt[i++];
+    caret.before(ch);
+    typing = setTimeout(step, ch === '\n' ? 260 : /[.,!?-]/.test(ch) ? 140 : 32);
+  })();
+}
+
+/* ---------- 3. Игра: поймай сердечки ---------- */
+const GOAL = 10;
+let caught = 0, catchTimer = null, catchRunning = false;
+const arena = $('arena');
+function startCatch() {
+  if (catchRunning || caught >= GOAL) return;
+  catchRunning = true;
+  $('arena-msg').style.display = 'none';
+  spawnFalling();
+  catchTimer = setInterval(spawnFalling, 650);
+}
+function spawnFalling() {
+  const bad = Math.random() < .22;
+  const b = document.createElement('button');
+  b.className = 'falling'; b.type = 'button';
+  b.textContent = bad ? '💔' : pick(['❤️', '💖', '💗', '💘']);
+  b.setAttribute('aria-label', bad ? 'разбитое сердце' : 'сердечко');
+  b.style.left = (12 + Math.random() * 76) + '%';
+  b.style.setProperty('--h', (arena.clientHeight + 70) + 'px');
+  b.style.animationDuration = (2.4 + Math.random() * 1.6) + 's';
+  b.addEventListener('animationend', () => b.remove());
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const ar = arena.getBoundingClientRect(), r = b.getBoundingClientRect();
+    const pop = document.createElement('div'); pop.className = 'pop';
+    pop.style.left = (r.left - ar.left + r.width / 2) + 'px';
+    pop.style.top = (r.top - ar.top + r.height / 2) + 'px';
+    if (bad) { caught = Math.max(0, caught - 1); pop.textContent = '-1'; pop.style.color = '#9aa'; sfx.bad(); if (navigator.vibrate) navigator.vibrate(60); }
+    else { caught++; pop.textContent = '+1'; pop.style.color = '#ff8fab'; sfx.pop(); burstAt(b, 8); }
+    arena.appendChild(pop); pop.addEventListener('animationend', () => pop.remove());
+    b.remove();
+    $('catch-score').textContent = Math.min(caught, GOAL);
+    if (caught >= GOAL) winCatch();
+  });
+  arena.appendChild(b);
+}
+function winCatch() {
+  clearInterval(catchTimer); catchRunning = false;
+  arena.querySelectorAll('.falling').forEach(f => f.remove());
+  const m = $('arena-msg'); m.style.display = 'grid'; m.style.opacity = 1;
+  m.innerHTML = '<span style="font-family:Caveat,cursive;font-size:34px">ловко! 💘</span>';
+  burstAt(arena, 70); sfx.chime();
+  reveal('catch-next');
+}
+arena.addEventListener('pointerdown', startCatch);
+
+/* ---------- 4. Игра: найди пары ---------- */
+let first = null, lock = false, moves = 0, pairs = 0;
+function buildMemory() {
+  const grid = $('grid');
+  grid.innerHTML = ''; first = null; lock = false; moves = 0; pairs = 0;
+  $('mem-moves').textContent = 0;
+  const deck = [...CONFIG.memoryEmojis, ...CONFIG.memoryEmojis].sort(() => Math.random() - .5);
+  deck.forEach(em => {
+    const c = document.createElement('button');
+    c.className = 'card'; c.type = 'button'; c.dataset.em = em; c.setAttribute('aria-label', 'карточка');
+    c.innerHTML = `<div class="inner"><div class="back">❤</div><div class="face">${em}</div></div>`;
+    c.addEventListener('click', () => flipCard(c));
+    grid.appendChild(c);
+  });
+}
+function flipCard(c) {
+  if (lock || c === first || c.classList.contains('done')) return;
+  c.classList.add('flip'); sfx.flip();
+  if (!first) { first = c; return; }
+  moves++; $('mem-moves').textContent = moves;
+  if (first.dataset.em === c.dataset.em) {
+    const a = first; first = null;
+    setTimeout(() => {
+      a.classList.add('done'); c.classList.add('done'); sfx.pop(); burstAt(c, 10);
+      if (++pairs === CONFIG.memoryEmojis.length) { sfx.chime(); burstAt($('grid'), 70); reveal('memory-next'); }
+    }, 300);
+  } else {
+    lock = true; const a = first; first = null;
+    setTimeout(() => { a.classList.remove('flip'); c.classList.remove('flip'); lock = false; }, 800);
+  }
+}
+buildMemory();
+
+/* ---------- 5. Игра: скретч-карта ---------- */
+const sc = $('scratch-cv'), sctx = sc.getContext('2d');
+let scratching = false, scratchDone = false, scratchMoves = 0, lastPt = null;
+function setupScratch() {
+  $('scratch-text').innerHTML = CONFIG.scratchText;
+  scratchDone = false; sc.style.opacity = 1; sc.style.pointerEvents = 'auto';
+  const r = sc.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+  sc.width = r.width * d; sc.height = r.height * d;
+  sctx.setTransform(d, 0, 0, d, 0, 0);
+  sctx.globalCompositeOperation = 'source-over';
+  const g = sctx.createLinearGradient(0, 0, r.width, r.height);
+  g.addColorStop(0, '#d7d0d6'); g.addColorStop(.5, '#f4eef2'); g.addColorStop(1, '#bdb3bb');
+  sctx.fillStyle = g; sctx.fillRect(0, 0, r.width, r.height);
+  sctx.fillStyle = 'rgba(120,40,70,.18)';
+  for (let i = 0; i < 26; i++) heartPath(sctx, Math.random() * r.width, Math.random() * r.height, 14 + Math.random() * 16), sctx.fill();
+  sctx.fillStyle = '#7a2a44'; sctx.font = '700 26px Caveat, cursive';
+  sctx.textAlign = 'center'; sctx.textBaseline = 'middle';
+  sctx.fillText('сотри меня ✨', r.width / 2, r.height / 2);
+  sctx.globalCompositeOperation = 'destination-out';
+  sctx.lineCap = sctx.lineJoin = 'round'; sctx.lineWidth = 46;
+}
+function scratchPt(e) { const r = sc.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function scratchTo(p) {
+  sctx.beginPath();
+  if (lastPt) { sctx.moveTo(lastPt.x, lastPt.y); sctx.lineTo(p.x, p.y); sctx.stroke(); }
+  else { sctx.arc(p.x, p.y, 23, 0, Math.PI * 2); sctx.fill(); }
+  lastPt = p;
+  if (++scratchMoves % 8 === 0) checkScratch();
+}
+function checkScratch() {
+  if (scratchDone) return;
+  const data = sctx.getImageData(0, 0, sc.width, sc.height).data;
+  let clear = 0, total = 0;
+  for (let i = 3; i < data.length; i += 4 * 40) { total++; if (data[i] < 40) clear++; }
+  if (clear / total > .5) {
+    scratchDone = true; sc.style.opacity = 0; sc.style.pointerEvents = 'none';
+    sfx.chime(); burstAt($('scratch'), 80); reveal('scratch-next');
+  }
+}
+sc.addEventListener('pointerdown', e => { e.preventDefault(); scratching = true; lastPt = null; sc.setPointerCapture(e.pointerId); scratchTo(scratchPt(e)); });
+sc.addEventListener('pointermove', e => { if (scratching) { e.preventDefault(); scratchTo(scratchPt(e)); } });
+['pointerup', 'pointercancel'].forEach(t => sc.addEventListener(t, () => { scratching = false; lastPt = null; checkScratch(); }));
+sceneEnter['s-scratch'] = () => requestAnimationFrame(setupScratch);
+
+/* ---------- 6. Вопрос с убегающей «Нет» ---------- */
+let noCount = 0;
+const no = $('no'), yes = $('yes');
+function flee(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  noCount++;
+  const r = no.getBoundingClientRect();
+  if (!no.classList.contains('fleeing')) {
+    no.style.left = r.left + 'px'; no.style.top = r.top + 'px';
+    no.classList.add('fleeing');
+    void no.offsetWidth;
+  }
+  const pad = 16, yr = yes.getBoundingClientRect();
+  const maxX = innerWidth - r.width - pad, maxY = innerHeight - r.height - pad - 60;
+  let x, y, tries = 0;
+  do {
+    x = pad + Math.random() * Math.max(0, maxX - pad);
+    y = pad + Math.random() * Math.max(0, maxY - pad);
+    tries++;
+  } while (tries < 30 && (Math.hypot(x - r.left, y - r.top) < 120 ||
+           (x + r.width > yr.left - 20 && x < yr.right + 20 && y + r.height > yr.top - 20 && y < yr.bottom + 20)));
+  no.style.left = x + 'px'; no.style.top = y + 'px';
+  no.style.transform = `scale(${Math.max(.5, 1 - noCount * .07)}) rotate(${(Math.random() - .5) * 30}deg)`;
+  yes.style.transform = `scale(${Math.min(1 + noCount * .1, 1.8)})`;
+  $('no-phrase').textContent = CONFIG.noPhrases[(noCount - 1) % CONFIG.noPhrases.length];
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+no.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') flee(e); });
+no.addEventListener('pointerdown', flee);
+no.addEventListener('click', flee);
+
+/* ---------- 7. Да! ---------- */
+yes.onclick = () => {
+  burstAt(yes, 120);
+  setTimeout(() => burst(innerWidth * .2, innerHeight * .4, 60), 250);
+  setTimeout(() => burst(innerWidth * .8, innerHeight * .4, 60), 450);
+  sfx.chime();
+  if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+  no.classList.remove('fleeing'); no.removeAttribute('style'); yes.removeAttribute('style');
+  $('final-text').textContent = CONFIG.finalText;
+  $('reasons').innerHTML = '';
+  CONFIG.reasons.forEach((t, i) => {
+    const li = document.createElement('li');
+    li.textContent = t; li.style.animationDelay = (0.6 + i * .25) + 's';
+    $('reasons').appendChild(li);
+  });
+  show('s-final');
+};
+
+$('again').onclick = () => {
+  noCount = 0; caught = 0; $('catch-score').textContent = 0; $('no-phrase').textContent = '';
+  const m = $('arena-msg'); m.textContent = 'нажми сюда, чтобы начать'; m.style.display = 'grid'; m.style.opacity = '';
+  buildMemory();
+  ['letter-next', 'catch-next', 'memory-next', 'scratch-next', 'sign'].forEach(id => $(id).classList.remove('show'));
+  $('letter-hint').style.visibility = '';
+  $('envelope').classList.remove('open');
+  show('s-envelope');
+};
+</script>
+</body>
+</html>
