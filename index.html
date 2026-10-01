@@ -215,6 +215,76 @@
   }
   .scratch canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; transition: opacity .6s; }
 
+  /* ---------- Игра: накачай сердце ---------- */
+  .pump-wrap { height: min(300px, 42svh); display: grid; place-items: center; margin-top: 6px; }
+  .pump-heart {
+    font-size: 120px; line-height: 1; border: 0; background: none; cursor: pointer; padding: 10px;
+    transform: scale(var(--s, .6)); transition: transform .08s; touch-action: none;
+    filter: drop-shadow(0 10px 30px rgba(255,77,121,.5));
+  }
+  .meter { height: 14px; border-radius: 7px; background: rgba(255,255,255,.1); overflow: hidden; max-width: 320px; margin: 0 auto; }
+  .meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff8fab, #e0144f); border-radius: 7px; }
+
+  /* ---------- Игра: напёрстки ---------- */
+  .cups { position: relative; height: 170px; max-width: 360px; margin: 30px auto 0; }
+  .cup {
+    position: absolute; bottom: 0; width: 30%; height: 150px; border: 0; background: none; padding: 0; cursor: pointer;
+    transition: left .32s ease-in-out;
+  }
+  .cup .shell {
+    position: absolute; left: 6%; right: 6%; bottom: 0; height: 110px; z-index: 2;
+    background: linear-gradient(90deg, #c3123f, #ff5d86 45%, #c3123f);
+    clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%); border-radius: 6px;
+    transition: transform .4s cubic-bezier(.3,1.4,.5,1);
+  }
+  .cup .shell::after { content: "❤"; position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.35); font-size: 28px; }
+  .cup .prize { position: absolute; left: 0; right: 0; bottom: 8px; font-size: 44px; z-index: 1; }
+  .cup.up .shell { transform: translateY(-80px); }
+  .cups.busy .cup { pointer-events: none; }
+  .cups-msg { min-height: 30px; margin-top: 14px; font-family: "Caveat", cursive; font-size: 26px; color: var(--rose-soft); }
+
+  /* ---------- Игра: соедини точки ---------- */
+  .dots-board { width: min(340px, 100%); margin: 10px auto 0; touch-action: none; }
+  .dots-board svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .dot circle { fill: rgba(255,255,255,.12); stroke: var(--rose-soft); stroke-width: 2; transition: fill .2s; }
+  .dot text { fill: var(--cream); font: 700 15px "Cormorant Garamond", serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .dot.hit circle { fill: var(--rose); stroke: #fff; }
+  .dot.shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  .dots-line { fill: none; stroke: var(--rose-soft); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+  .dots-fill { fill: var(--rose); opacity: 0; transition: opacity 1s; }
+  .dots-fill.show { opacity: .85; }
+
+  /* ---------- Игра: пазл ---------- */
+  .puzzle {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+    width: min(320px, 100%); aspect-ratio: 1; margin: 14px auto 0;
+  }
+  .tile {
+    border: 0; padding: 0; cursor: pointer; border-radius: 8px;
+    background-size: 300% 300%; transition: transform .2s, box-shadow .2s;
+  }
+  .tile.sel { transform: scale(.9); box-shadow: 0 0 0 3px var(--gold); }
+  .puzzle.solved { gap: 0; transition: gap .5s; }
+  .puzzle.solved .tile { border-radius: 0; pointer-events: none; }
+
+  /* ---------- Игра: собери слово ---------- */
+  .slots { display: flex; gap: 8px; justify-content: center; margin: 22px 0; flex-wrap: wrap; }
+  .slot {
+    width: 46px; height: 56px; border-radius: 10px; border-bottom: 3px solid var(--rose-soft);
+    background: rgba(255,255,255,.06); display: grid; place-items: center;
+    font: 700 30px "Cormorant Garamond", serif;
+  }
+  .slot.fill { animation: rise .3s both; color: var(--rose-soft); }
+  .letters { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 360px; margin: 0 auto; }
+  .letter-btn {
+    width: 56px; height: 56px; border-radius: 14px; border: 1px solid rgba(255,255,255,.2);
+    background: rgba(255,255,255,.08); color: var(--cream); cursor: pointer;
+    font: 700 28px "Cormorant Garamond", serif; transition: transform .15s, opacity .3s;
+  }
+  .letter-btn.used { opacity: 0; pointer-events: none; transform: scale(.5); }
+  .letter-btn.shake { animation: shake .3s; border-color: #ff4d79; }
+
   /* ---------- Вопрос ---------- */
   .question-heart {
     font-size: 72px; display: inline-block; margin-bottom: 8px;
@@ -284,38 +354,97 @@
     </div>
     <p class="letter-hint" id="letter-hint">нажми на письмо, чтобы дочитать сразу</p>
     <div class="next-wrap" id="letter-next">
-      <p class="hint" style="margin-bottom:14px">но это ещё не всё. сначала - три маленьких испытания</p>
+      <p class="hint" style="margin-bottom:14px">но это ещё не всё. сначала - восемь маленьких испытаний</p>
       <button class="btn btn-yes" data-go="s-catch">Поехали →</button>
     </div>
   </section>
 
   <!-- 3. Игра 1: поймай сердечки -->
   <section class="scene" id="s-catch">
-    <div class="dots"><i class="on"></i><i></i><i></i></div>
+    <div class="dots"></div>
     <h2>Поймай <em>10 сердечек</em></h2>
     <p class="hint">тапай по ❤️, а 💔 не трогай</p>
     <div class="score">поймано: <b id="catch-score">0</b> / 10</div>
     <div class="arena" id="arena"><div class="start-msg" id="arena-msg">нажми сюда, чтобы начать</div></div>
     <div class="next-wrap" id="catch-next">
+      <button class="btn btn-yes" data-go="s-pump">Дальше →</button>
+    </div>
+  </section>
+
+  <!-- Игра: накачай сердце -->
+  <section class="scene" id="s-pump">
+    <div class="dots"></div>
+    <h2>Накачай <em>сердце</em></h2>
+    <p class="hint">тапай быстро, пока не станет большим. оно сдувается!</p>
+    <div class="pump-wrap"><button class="pump-heart" id="pump" aria-label="Накачать сердце">❤️</button></div>
+    <div class="meter"><i id="pump-bar"></i></div>
+    <div class="next-wrap" id="pump-next">
       <button class="btn btn-yes" data-go="s-memory">Дальше →</button>
     </div>
   </section>
 
   <!-- 4. Игра 2: найди пары -->
   <section class="scene" id="s-memory">
-    <div class="dots"><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="dots"></div>
     <h2>Найди <em>все пары</em></h2>
     <p class="hint">переворачивай по две карточки</p>
     <div class="score">ходов: <b id="mem-moves">0</b></div>
     <div class="grid" id="grid"></div>
     <div class="next-wrap" id="memory-next">
+      <button class="btn btn-yes" data-go="s-cups">Дальше →</button>
+    </div>
+  </section>
+
+  <!-- Игра: напёрстки -->
+  <section class="scene" id="s-cups">
+    <div class="dots"></div>
+    <h2>Где <em>сердечко?</em></h2>
+    <p class="hint">следи за стаканчиком</p>
+    <div class="cups" id="cups"></div>
+    <div class="cups-msg" id="cups-msg" aria-live="polite"></div>
+    <button class="btn btn-ghost" id="cups-start">Перемешать</button>
+    <div class="next-wrap" id="cups-next">
+      <button class="btn btn-yes" data-go="s-dots">Дальше →</button>
+    </div>
+  </section>
+
+  <!-- Игра: соедини точки -->
+  <section class="scene" id="s-dots">
+    <div class="dots"></div>
+    <h2>Соедини <em>точки</em></h2>
+    <p class="hint">тапай по порядку: 1, 2, 3...</p>
+    <div class="dots-board"><svg id="dots-svg" viewBox="0 0 340 320"></svg></div>
+    <div class="next-wrap" id="dots-next">
+      <button class="btn btn-yes" data-go="s-puzzle">Дальше →</button>
+    </div>
+  </section>
+
+  <!-- Игра: пазл -->
+  <section class="scene" id="s-puzzle">
+    <div class="dots"></div>
+    <h2>Собери <em>картинку</em></h2>
+    <p class="hint">тапни два кусочка, чтобы поменять их местами</p>
+    <div class="puzzle" id="puzzle"></div>
+    <div class="next-wrap" id="puzzle-next">
+      <button class="btn btn-yes" data-go="s-word">Дальше →</button>
+    </div>
+  </section>
+
+  <!-- Игра: собери слово -->
+  <section class="scene" id="s-word">
+    <div class="dots"></div>
+    <h2>Собери <em>слово</em></h2>
+    <p class="hint">тапай буквы по порядку</p>
+    <div class="slots" id="slots"></div>
+    <div class="letters" id="letters"></div>
+    <div class="next-wrap" id="word-next">
       <button class="btn btn-yes" data-go="s-scratch">Последнее →</button>
     </div>
   </section>
 
   <!-- 5. Игра 3: скретч-карта -->
   <section class="scene" id="s-scratch">
-    <div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <div class="dots"></div>
     <h2>Сотри <em>пальцем</em></h2>
     <p class="hint">под ней кое-что спрятано</p>
     <div class="scratch" id="scratch">
@@ -363,6 +492,7 @@ const CONFIG = {
 Спасибо, что ты есть.`,
   scratchText: 'Ты самая лучшая 💗<br>А теперь главный вопрос...',
   memoryEmojis: ['💗', '🌹', '🧸', '🍫', '💍', '🌙'],
+  word: 'ЛЮБЛЮ',
   finalText: 'И я тебя очень люблю. Это лучшее, что я сегодня услышал.',
   reasons: [
     '💗 за твою улыбку',
@@ -644,6 +774,198 @@ sc.addEventListener('pointermove', e => { if (scratching) { e.preventDefault(); 
 ['pointerup', 'pointercancel'].forEach(t => sc.addEventListener(t, () => { scratching = false; lastPt = null; checkScratch(); }));
 sceneEnter['s-scratch'] = () => requestAnimationFrame(setupScratch);
 
+/* ---------- Прогресс: точки «игра N из 8» ---------- */
+const GAMES = ['s-catch', 's-pump', 's-memory', 's-cups', 's-dots', 's-puzzle', 's-word', 's-scratch'];
+GAMES.forEach((id, n) => {
+  $(id).querySelector('.dots').innerHTML = GAMES.map((_, k) => `<i class="${k <= n ? 'on' : ''}"></i>`).join('');
+});
+
+/* ---------- Игра: накачай сердце ---------- */
+let pumpLevel = 0, pumpTimer = null, pumpDone = false;
+function drawPump() {
+  $('pump').style.setProperty('--s', (.6 + pumpLevel / 100 * .8).toFixed(3));
+  $('pump-bar').style.width = pumpLevel + '%';
+}
+$('pump').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  if (pumpDone) return;
+  pumpLevel = Math.min(100, pumpLevel + 6);
+  drawPump(); sfx.pop();
+  if (!pumpTimer) pumpTimer = setInterval(() => {
+    if (pumpDone) return;
+    pumpLevel = Math.max(0, pumpLevel - 1.1); drawPump();
+  }, 60);
+  if (pumpLevel >= 100) {
+    pumpDone = true; clearInterval(pumpTimer);
+    $('pump').textContent = '💖'; burstAt($('pump'), 90); sfx.chime();
+    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+    reveal('pump-next');
+  }
+});
+drawPump();
+
+/* ---------- Игра: напёрстки ---------- */
+let cupSlots = [0, 1, 2], prizeCup = 1, cupsReady = false, cupsWon = false;
+const cupEls = [0, 1, 2].map(i => {
+  const b = document.createElement('button');
+  b.className = 'cup'; b.type = 'button'; b.setAttribute('aria-label', 'стаканчик ' + (i + 1));
+  b.innerHTML = `<div class="prize">${i === prizeCup ? '💗' : ''}</div><div class="shell"></div>`;
+  b.addEventListener('click', () => pickCup(i));
+  $('cups').appendChild(b);
+  return b;
+});
+function placeCups() { cupEls.forEach((c, i) => c.style.left = (cupSlots[i] * 35) + '%'); }
+placeCups();
+cupEls[prizeCup].classList.add('up');
+$('cups').classList.add('busy');
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+async function shuffleCups() {
+  if (cupsWon) return;
+  $('cups-start').style.display = 'none'; $('cups-msg').textContent = '';
+  $('cups').classList.add('busy'); cupsReady = false;
+  cupEls.forEach(c => c.classList.remove('up'));
+  cupEls[prizeCup].classList.add('up'); await wait(900);
+  cupEls[prizeCup].classList.remove('up'); await wait(450);
+  for (let k = 0; k < 8; k++) {
+    const a = Math.random() * 3 | 0, b = (a + 1 + (Math.random() * 2 | 0)) % 3;
+    [cupSlots[a], cupSlots[b]] = [cupSlots[b], cupSlots[a]];
+    placeCups(); sfx.flip(); await wait(380);
+  }
+  $('cups').classList.remove('busy'); cupsReady = true;
+  $('cups-msg').textContent = 'где оно?';
+}
+function pickCup(i) {
+  if (!cupsReady) return;
+  cupsReady = false; $('cups').classList.add('busy');
+  cupEls[i].classList.add('up');
+  if (i === prizeCup) {
+    cupsWon = true; $('cups-msg').textContent = 'нашла! 💗';
+    burstAt(cupEls[i], 60); sfx.chime(); reveal('cups-next');
+  } else {
+    sfx.bad(); $('cups-msg').textContent = 'мимо... давай ещё раз';
+    setTimeout(() => cupEls[prizeCup].classList.add('up'), 500);
+    setTimeout(() => { $('cups-start').style.display = ''; $('cups-start').textContent = 'Ещё раз'; }, 900);
+  }
+}
+$('cups-start').onclick = shuffleCups;
+
+/* ---------- Игра: соедини точки ---------- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+// точки контура сердца, по часовой от нижнего кончика
+const dotPts = [[170, 295], [100, 232], [42, 162], [30, 95], [64, 44], [120, 32], [170, 78],
+  [220, 32], [276, 44], [310, 95], [298, 162], [240, 232]].map(([x, y]) => ({ x, y }));
+const DOT_N = dotPts.length;
+let dotNext = 0;
+(function buildDots() {
+  const svg = $('dots-svg');
+  const fill = document.createElementNS(SVGNS, 'polygon');
+  fill.setAttribute('class', 'dots-fill'); fill.setAttribute('points', dotPts.map(p => p.x + ',' + p.y).join(' '));
+  const line = document.createElementNS(SVGNS, 'polyline');
+  line.setAttribute('class', 'dots-line'); line.id = 'dots-line'; line.setAttribute('points', '');
+  svg.append(fill, line);
+  dotPts.forEach((p, k) => {
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'dot'); g.style.transformOrigin = p.x + 'px ' + p.y + 'px'; g.style.transformBox = 'view-box';
+    const hit = document.createElementNS(SVGNS, 'circle');   // невидимая большая зона для пальца
+    hit.setAttribute('cx', p.x); hit.setAttribute('cy', p.y); hit.setAttribute('r', 22);
+    hit.setAttribute('style', 'fill:transparent;stroke:none');
+    const c = document.createElementNS(SVGNS, 'circle');
+    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 15);
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('x', p.x); t.setAttribute('y', p.y); t.textContent = k + 1;
+    g.append(hit, c, t);
+    g.addEventListener('pointerdown', (e) => { e.preventDefault(); tapDot(k, g); });
+    svg.appendChild(g);
+  });
+  svg._fill = fill;
+})();
+function tapDot(k, g) {
+  if (dotNext > DOT_N) return;
+  if (k !== dotNext) {
+    g.classList.remove('shake'); void g.getBBox(); g.classList.add('shake'); sfx.bad(); return;
+  }
+  g.classList.add('hit'); sfx.pop();
+  dotNext++;
+  const pts = dotPts.slice(0, dotNext);
+  if (dotNext === DOT_N) pts.push(dotPts[0]);
+  $('dots-line').setAttribute('points', pts.map(p => p.x + ',' + p.y).join(' '));
+  if (dotNext === DOT_N) {
+    dotNext++;
+    $('dots-svg')._fill.classList.add('show');
+    burstAt($('dots-svg'), 80); sfx.chime(); reveal('dots-next');
+  }
+}
+
+/* ---------- Игра: пазл 3×3 ---------- */
+let puzzleOrder = [], puzzleSel = null;
+function makePuzzleImg() {
+  const c = document.createElement('canvas'); c.width = c.height = 600;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 600, 600);
+  g.addColorStop(0, '#ffb3c6'); g.addColorStop(1, '#e0144f');
+  x.fillStyle = g; x.fillRect(0, 0, 600, 600);
+  x.fillStyle = 'rgba(255,255,255,.18)';
+  for (let i = 0; i < 18; i++) { heartPath(x, (i * 137) % 600, (i * 211) % 600, 30 + (i % 4) * 14); x.fill(); }
+  x.fillStyle = '#fff'; x.shadowColor = 'rgba(120,0,30,.4)'; x.shadowBlur = 30;
+  heartPath(x, 300, 110, 360); x.fill();
+  x.shadowBlur = 0; x.fillStyle = '#c3123f'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '700 64px Caveat, cursive'; x.fillText(CONFIG.to, 300, 300);
+  x.font = '700 40px Caveat, cursive'; x.fillText('+ ' + CONFIG.from, 300, 365);
+  return c.toDataURL('image/jpeg', .85);
+}
+let puzzleImg = makePuzzleImg();
+if (document.fonts) document.fonts.load('700 64px Caveat').then(() => { puzzleImg = makePuzzleImg(); renderPuzzle(); }).catch(() => {});
+function buildPuzzle() {
+  do { puzzleOrder = [...Array(9).keys()].sort(() => Math.random() - .5); }
+  while (puzzleOrder.every((v, i) => v === i));
+  renderPuzzle();
+}
+function renderPuzzle() {
+  const box = $('puzzle'); box.innerHTML = '';
+  puzzleOrder.forEach((piece, pos) => {
+    const t = document.createElement('button');
+    t.className = 'tile' + (puzzleSel === pos ? ' sel' : ''); t.type = 'button';
+    t.setAttribute('aria-label', 'кусочек ' + (pos + 1));
+    t.style.backgroundImage = `url(${puzzleImg})`;
+    t.style.backgroundPosition = `${(piece % 3) * 50}% ${(piece / 3 | 0) * 50}%`;
+    t.addEventListener('click', () => tapTile(pos));
+    box.appendChild(t);
+  });
+}
+function tapTile(pos) {
+  if (puzzleSel === null) { puzzleSel = pos; sfx.flip(); renderPuzzle(); return; }
+  if (puzzleSel !== pos) [puzzleOrder[puzzleSel], puzzleOrder[pos]] = [puzzleOrder[pos], puzzleOrder[puzzleSel]];
+  puzzleSel = null; sfx.pop(); renderPuzzle();
+  if (puzzleOrder.every((v, i) => v === i)) {
+    $('puzzle').classList.add('solved'); burstAt($('puzzle'), 80); sfx.chime(); reveal('puzzle-next');
+  }
+}
+buildPuzzle();
+
+/* ---------- Игра: собери слово ---------- */
+let wordPos = 0;
+(function buildWord() {
+  const w = [...CONFIG.word];
+  $('slots').innerHTML = w.map(() => '<div class="slot"></div>').join('');
+  let mixed;
+  do { mixed = [...w].sort(() => Math.random() - .5); } while (mixed.join('') === w.join('') && w.length > 1);
+  mixed.forEach(ch => {
+    const b = document.createElement('button');
+    b.className = 'letter-btn'; b.type = 'button'; b.textContent = ch;
+    b.addEventListener('click', () => {
+      if (ch === w[wordPos]) {
+        b.classList.add('used');
+        const slot = $('slots').children[wordPos]; slot.textContent = ch; slot.classList.add('fill');
+        sfx.pop(); wordPos++;
+        if (wordPos === w.length) { burstAt($('slots'), 90); sfx.chime(); reveal('word-next'); }
+      } else {
+        b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); sfx.bad();
+      }
+    });
+    $('letters').appendChild(b);
+  });
+})();
+
 /* ---------- 6. Вопрос с убегающей «Нет» ---------- */
 let noCount = 0;
 const no = $('no'), yes = $('yes');
@@ -693,15 +1015,7 @@ yes.onclick = () => {
   show('s-final');
 };
 
-$('again').onclick = () => {
-  noCount = 0; caught = 0; $('catch-score').textContent = 0; $('no-phrase').textContent = '';
-  const m = $('arena-msg'); m.textContent = 'нажми сюда, чтобы начать'; m.style.display = 'grid'; m.style.opacity = '';
-  buildMemory();
-  ['letter-next', 'catch-next', 'memory-next', 'scratch-next', 'sign'].forEach(id => $(id).classList.remove('show'));
-  $('letter-hint').style.visibility = '';
-  $('envelope').classList.remove('open');
-  show('s-envelope');
-};
+$('again').onclick = () => location.reload();
 </script>
 </body>
 </html>
